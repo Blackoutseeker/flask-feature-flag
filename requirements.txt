@@ -5,7 +5,7 @@ pytest-flask
 pytest==8.4.2
 bandit
 pip-audit
-urllib3==2.6.3
+urllib3==2.8.0
 msgpack==1.1.2
 filelock==3.19.1
 requests==2.32.5
