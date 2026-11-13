@@ -1,0 +1,87 @@
+name: Esteira DevSecOps (Validação e Segurança)
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  VERSAO_PYTHON: "3.9"
+  NOME_VERSAO: "1.0.0"
+  ENV_NAME: "producao"
+
+jobs:
+  lint-and-test:
+    name: 1. Qualidade e Testes Funcionais
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar codigo fonte
+        uses: actions/checkout@v3
+
+      - name: Configurar Python ${{ env.VERSAO_PYTHON }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.VERSAO_PYTHON }}
+
+      - name: Instalar Dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Lint com Flake8
+        run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Executar Testes Unitarios (Pytest)
+        run: pytest -v
+
+  security-scans:
+    name: 2. Escaneamento de Segurança (SAST, SCA & Secrets)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar codigo fonte
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Configurar Python ${{ env.VERSAO_PYTHON }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.VERSAO_PYTHON }}
+
+      - name: Instalar Dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Secret Scanning (TruffleHog)
+        uses: trufflesecurity/trufflehog@main
+        with:
+          extra_args: --only-verified
+
+      - name: SAST - Análise Estática com Bandit
+        run: bandit -r . -lll
+
+      - name: SCA - Análise de Dependências com Pip-Audit
+        run: pip-audit -r requirements.txt
+
+  docker-build-and-scan:
+    name: 3. Build Docker e Scan Trivy
+    needs: [lint-and-test, security-scans]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar codigo fonte
+        uses: actions/checkout@v3
+
+      - name: Build da Imagem Docker Local
+        run: docker build -t app:test .
+
+      - name: Escaneamento de Vulnerabilidades da Imagem (Trivy)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'app:test'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL'
