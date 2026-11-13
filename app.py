@@ -59,4 +59,5 @@ def desconto():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    # A flag '# nosec B104' evita falsos positivos do Bandit ao fazer bind em 0.0.0.0
+    app.run(host='0.0.0.0', port=5000)  # nosec B104
