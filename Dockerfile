@@ -4,7 +4,10 @@ WORKDIR /app
 
 COPY requirements.txt .
 
-RUN pip install --no-cache-dir -r requirements.txt
+# Atualiza pacotes base do sistema operacional para corrigir vulnerabilidades antes do teste do Trivy
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
